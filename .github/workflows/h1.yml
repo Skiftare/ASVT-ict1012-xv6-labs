@@ -14,15 +14,25 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Install dependencies
+    - name: Install RISC-V toolchain and QEMU
       run: |
         sudo apt-get update
-        sudo apt-get install -y qemu-system-x86 gcc make git
+        sudo apt-get install -y \
+          gcc-riscv64-unknown-elf \
+          binutils-riscv64-unknown-elf \
+          qemu-system-misc \
+          libfdt-dev \
+          device-tree-compiler
+
+    - name: Verify toolchain
+      run: |
+        riscv64-unknown-elf-gcc --version
+        qemu-system-riscv64 --version
 
     - name: Build xv6
       run: |
         make clean
-        make qemu | head -100
+        make
 
     - name: Run grade-lab-util tests
       run: |
@@ -30,7 +40,3 @@ jobs:
         ./grade-lab-util find
         ./grade-lab-util sleep
         ./grade-lab-util exec
-
-    - name: Check results
-      run: |
-        echo "All tests completed!"
