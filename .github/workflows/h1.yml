@@ -1,0 +1,36 @@
+name: Lab 1 - Utilities
+
+on:
+  push:
+    branches: [ main, hw-1 ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-22.04
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y qemu-system-x86 gcc make git
+
+    - name: Build xv6
+      run: |
+        make clean
+        make qemu | head -100
+
+    - name: Run grade-lab-util tests
+      run: |
+        chmod +x grade-lab-util
+        ./grade-lab-util find
+        ./grade-lab-util sleep
+        ./grade-lab-util exec
+
+    - name: Check results
+      run: |
+        echo "All tests completed!"
