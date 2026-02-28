@@ -20,17 +20,50 @@ jobs:
         sudo apt-get install -y \
           gcc-riscv64-unknown-elf \
           qemu-system-misc \
-          libfdt-dev
+          libfdt-dev \
+          device-tree-compiler \
+          gdb-multiarch
 
     - name: Create gdbinit template
       run: |
         echo "set architecture riscv:rv64" > .gdbinit.tmpl-riscv
 
-    - name: Build and Test
+    - name: Build xv6
       run: |
         make clean
         make
+
+    - name: Run tests and check results
+      run: |
         chmod +x grade-lab-util
-        timeout 600 ./grade-lab-util find || true
-        timeout 600 ./grade-lab-util sleep || true
-        timeout 600 ./grade-lab-util exec || true
+        
+        # Запускаем тесты и сохраняем вывод
+        ./grade-lab-util find 2>&1 | tee test-find.log
+        ./grade-lab-util sleep 2>&1 | tee -a test-sleep.log
+        ./grade-lab-util exec 2>&1 | tee -a test-exec.log
+        
+        # Объединяем логи
+        cat test-*.log > all-tests.log
+        
+        # Проверяем на наличие FAIL
+        if grep -q "FAIL" all-tests.log; then
+          echo "❌ Some tests failed!"
+          echo ""
+          echo "=== Failed tests ==="
+          grep "FAIL" all-tests.log
+          echo ""
+          echo "=== Full log ==="
+          cat all-tests.log
+          exit 1
+        else
+          echo "✅ All tests passed!"
+        fi
+
+    - name: Upload test logs (if failed)
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-logs
+        path: |
+          test-*.log
+          xv6.out.*
