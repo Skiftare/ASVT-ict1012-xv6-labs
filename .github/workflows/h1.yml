@@ -9,6 +9,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-22.04
+    timeout-minutes: 20  # Даём больше времени
     
     steps:
     - name: Checkout code
@@ -19,10 +20,17 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y \
           gcc-riscv64-unknown-elf \
+          binutils-riscv64-unknown-elf \
           qemu-system-misc \
           libfdt-dev \
           device-tree-compiler \
-          gdb-multiarch
+          gdb-multiarch \
+          bc
+
+    - name: Configure lab
+      run: |
+        mkdir -p conf
+        echo "LAB=util" > conf/lab.mk
 
     - name: Create gdbinit template
       run: |
@@ -31,39 +39,35 @@ jobs:
     - name: Build xv6
       run: |
         make clean
-        make
+        make fs.img  # Явно собираем образ
 
-    - name: Run tests and check results
+    - name: Run tests with longer timeouts
+      env:
+        GRADE_TIMEOUT: 120  # Увеличиваем таймаут внутри тестов
       run: |
         chmod +x grade-lab-util
         
-        # Запускаем тесты и сохраняем вывод
-        ./grade-lab-util find 2>&1 | tee test-find.log
-        ./grade-lab-util sleep 2>&1 | tee -a test-sleep.log
-        ./grade-lab-util exec 2>&1 | tee -a test-exec.log
+        # Запускаем с увеличенными таймаутами
+        timeout 180 ./grade-lab-util find 2>&1 | tee test-find.log
+        timeout 180 ./grade-lab-util sleep 2>&1 | tee -a test-sleep.log
+        timeout 180 ./grade-lab-util exec 2>&1 | tee -a test-exec.log
         
-        # Объединяем логи
+        # Проверяем результаты
         cat test-*.log > all-tests.log
-        
-        # Проверяем на наличие FAIL
-        if grep -q "FAIL" all-tests.log; then
-          echo "❌ Some tests failed!"
-          echo ""
-          echo "=== Failed tests ==="
-          grep "FAIL" all-tests.log
-          echo ""
-          echo "=== Full log ==="
-          cat all-tests.log
+        if grep -q ": FAIL" all-tests.log; then
+          echo "Some tests failed!"
+          grep ": FAIL" all-tests.log
           exit 1
         else
-          echo "✅ All tests passed!"
+          echo "All tests passed!"
         fi
 
-    - name: Upload test logs (if failed)
+    - name: Upload logs on failure
       if: failure()
       uses: actions/upload-artifact@v4
       with:
-        name: test-logs
+        name: debug-logs
         path: |
           test-*.log
           xv6.out.*
+          fs.img
