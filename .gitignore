@@ -27,3 +27,13 @@ barrier
 *.pcap
 TAGS
 
+.vscode/
+.vscode-test/
+.idea/
+*.code-workspace
+
+*.swp
+*.swo
+*.tmp
+*.bak
+fs.img.bk
