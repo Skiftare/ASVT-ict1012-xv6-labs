@@ -56,7 +56,7 @@ Use as behavior spec for expected output and checks.
 Success check:
 - print_kpgtbl test passes with expected tree output.
 
-## Slide 3 - superpages (РУССКИЙ)
+## Slide 3 - superpages
 
 Цель:
 - Добавить 2MB superpages и не сломать обычный 4KB путь.
